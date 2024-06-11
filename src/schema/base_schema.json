@@ -1,0 +1,591 @@
+{
+    "$id": "base_schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "F5 BIG-IP Runtime Init Schema",
+    "type": "object",
+    "properties": {
+        "controls": {
+            "description": "Runtime Init controls used for setting logLevel and other Runtime Init settings",
+            "type": "object",
+            "properties": {
+                "logLevel": {
+                    "type": "string",
+                    "enum": [ "debug", "info", "silly", "warn", "error"]
+                },
+                "logFilename": {
+                    "type": "string",
+                    "examples": [ "/var/log/cloud/bigIpRuntimeInit.log" ]
+                },
+                "logToJson": {
+                    "type": "boolean",
+                    "enum": [ true, false ]
+                },
+                "extensionInstallDelayInMs": {
+                    "type": "number",
+                    "examples": [ 60000, 1000, 600]
+                }
+            }
+        },
+        "runtime_parameters": {
+            "description": "Runtime parameters used to render Automation Toolchain declarations.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "examples": ["ADMIN_PASSWORD", "HOST_NAME"]
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["static", "secret", "metadata", "url", "tag", "storage"]
+                    },
+                    "returnType": {
+                        "type": "string",
+                        "enum": ["string", "number", "boolean"]
+                    },
+                    "verifyTls": {
+                        "description": "For enabling secure site verification",
+                        "type": "boolean",
+                        "examples": ["true", "false"]
+                    },
+                    "trustedCertBundles": {
+                        "description": "List of paths to certificate bundles to use for all https requests",
+                        "type": "array",
+                        "examples": ["/path/to/cert.pem", "/path/to/another_cert.pem"]
+                    },
+                    "ipcalc": {
+                        "type": "string",
+                        "enum": [ "base", "mask", "bitmask", "hostmask", "broadcast", "size", "first", "last", "address"]
+                    },
+                    "value": {
+                        "type": "string",
+                        "examples": ["myValue"]
+                    },
+                    "secretProvider": {
+                        "type": "object",
+                        "properties": {
+                            "environment": {
+                                "type": "string",
+                                "enum": ["gcp", "aws", "azure", "hashicorp"]
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": ["SecretsManager", "SecretManager", "default", "KeyVault", "Vault"]
+                            },
+                            "appRolePath": {
+                                "description": "URL path of the App Role, if it's unique or if it includes the namespace",
+                                "type": "string",
+                                "examples": ["/v1/auth/approle/login", "/v1/MyNameSpace/auth/approle/login"]
+                            },
+                            "secretId": {
+                                "description": "ID or name of the secret in the secret manager of the specified environment",
+                                "type": "string",
+                                "examples": ["mySecretId", "test-document-01"]
+                            },
+                            "secretPath": {
+                                "description": "Path to secret object in Hashicorp Vault",
+                                "type": "string",
+                                "examples": ["secret/foo"]
+                            },
+                            "version": {
+                                "description": "Version identifier for the secret to be retrieved",
+                                "type": "string",
+                                "examples": ["AWSCURRENT", "1.0", "1"]
+                            },
+                            "vaultUrl": {
+                                "description": "URL of the Azure Key Vault",
+                                "type": "string",
+                                "examples": ["https://my-keyvault.vault.azure.net", "https://my-keyvault.vault.usgovcloudapi.net"]
+                            },
+                            "vaultServer": {
+                                "description": "URL of the Hashicorp Vault server",
+                                "type": "string",
+                                "pattern": "^(https?|http?):\/\/[^\\s$.?#].[^\\s]*$",
+                                "examples": ["https://my-vault-server:8200", "http://1.2.3.4:8200"]
+                            },
+                            "secretsEngine": {
+                                "description": "Hashicorp Vault secrets engine used",
+                                "type": "string",
+                                "enum": ["kv2"]
+                            },
+                            "authBackend": {
+                                "description": "Hashicorp Vault authentication backend used",
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "description": "Hashicorp Vault auth backend type",
+                                        "type": "string",
+                                        "enum": ["approle"]
+                                    },
+                                    "roleId": {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "enum": ["url", "inline"]
+                                            },
+                                            "value": {
+                                                "description": "Hashicorp Vault approle role ID",
+                                                "type": "string",
+                                                "examples": ["9c9b8014-d2e1-11eb-b8bc-0242ac130003", "file:///path/to/role-id"]
+                                            }
+                                        },
+                                        "allOf": [
+                                            {
+                                                "if": { "properties": { "type": { "const": "url" } } },
+                                                "then": { "properties": { "value": { "type": "string", "pattern": "^(http?|https?|file):\/\/[^\\s$.?#].[^\\s]*$"} }, "required": ["value"] }
+                                            },
+                                            {
+                                                "if": { "properties": { "type": { "const": "inline" } } },
+                                                "then": { "properties": { "value": { "type": "string"} }, "required": ["value"] }
+                                            }
+                                        ]
+                                    },
+                                    "secretId": {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "enum": ["url", "inline"]
+                                            },
+                                            "value": {
+                                                "description": "Hashicorp Vault approle secret ID",
+                                                "type": "string",
+                                                "examples": ["9c9b84a6-d2e1-11eb-b8bc-0242ac130003", "file:///path/to/secret-id", "https://path/to/secret-id"]
+                                            },
+                                            "unwrap": {
+                                                "description": "For unwrapping a wrapped secret ID",
+                                                "type": "boolean",
+                                                "examples": ["true", "false"]
+                                            }
+                                        },
+                                        "allOf": [
+                                            {
+                                                "if": { "properties": { "type": { "const": "url" } } },
+                                                "then": { "properties": { "value": { "type": "string", "pattern": "^(http?|https?|file):\/\/[^\\s$.?#].[^\\s]*$"} }, "required": ["value"] }
+                                            },
+                                            {
+                                                "if": { "properties": { "type": { "const": "inline" } } },
+                                                "then": { "properties": { "value": { "type": "string"} }, "required": ["value"] }
+                                            }
+                                        ]
+                                    }
+                                },
+                                "allOf": [
+                                    {
+                                        "if": { "properties": { "type": { "const": "approle" } } },
+                                        "then": { "required": ["roleId", "secretId"] }
+                                    }
+                                ]
+                            },
+                            "field": {
+                                "description": "field name to which secret value is mapped to",
+                                "type": "string",
+                                "examples": ["bigiqPassword", "regKey"]
+                            }
+                        },
+                        "allOf": [
+                            {
+                                "if": { "properties": { "environment": { "const": "azure" } } },
+                                "then": { "required": ["vaultUrl"] }
+                            },
+                            {
+                                "if": { "properties": { "environment": { "const": "hashicorp" } } },
+                                "then": { "required": ["vaultServer", "secretsEngine", "authBackend", "secretPath"] }
+                            }
+                        ],
+                        "required": ["environment", "type"],
+                        "additionalProperties": false
+                    },
+                    "metadataProvider": {
+                        "type": "object",
+                        "properties": {
+                            "environment": {
+                                "type": "string",
+                                "enum": ["aws", "azure", "gcp"]
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": ["network", "compute", "uri"]
+                            },
+                            "field": {
+                                "type": "string",
+                                "examples": ["name", "hostname", "ipv4", "local-ipv4s", "subnet-ipv4-cidr-block"]
+                            },
+                            "value": {
+                                "type": "string",
+                                "examples": ["/latest/dynamic/instance-identity/document", "/latest/api/token"]
+                            },
+                            "query": {
+                                "type": "string",
+                                "examples": ["region", "accountId"]
+                            },
+                            "ipcalc": {
+                                "type": "string",
+                                "enum": [ "base", "mask", "bitmask", "hostmask", "broadcast", "size", "first", "last", "address"]
+                            },
+                            "index": {
+                                "type": "integer",
+                                "examples": ["0", "1", "2"]
+                            }
+                        },
+                        "allOf": [
+                            {
+                                "if": { "properties": { "type": { "const": "compute" }, "environment": { "const": "aws" } } },
+                                "then": { "properties": { "field": { "type": "string", "enum": ["hostname"] } }, "required": ["field"] }
+                            },
+                            {
+                                "if": { "properties": { "type": { "const": "uri" }, "environment": { "const": "aws" } } },
+                                "then": { "properties": { "value": { "type": "string" } }, "required": ["value"] }
+                            },
+                            {
+                                "if": { "properties": { "type": { "const": "compute" }, "environment": { "const": "azure" } } },
+                                "then": { "properties": { "field": { "type": "string", "enum": ["name"] } }, "required": ["field"] }
+                            },
+                            {
+                                "if": { "properties": { "type": { "const": "compute" }, "environment": { "const": "gcp" } } },
+                                "then": { "properties": { "field": { "type": "string", "enum": ["name"] } }, "required": ["field"] }
+                            },
+                            {
+                                "if": { "properties": { "type": { "const": "network" }, "environment": { "const": "aws" } } },
+                                "then": { "properties": { "field": { "type": "string", "enum": ["local-ipv4s", "subnet-ipv4-cidr-block"] }, "index": { "type": "integer", "minimum": 0, "maximum": 8 } }, "required": ["field", "index"] }
+                            },
+                            {
+                                "if": { "properties": { "type": { "const": "network" }, "environment": { "const": "azure" }} },
+                                "then": { "properties": { "field": { "type": "string", "enum": ["ipv4", "ipv6"] }, "index": { "type": "integer", "minimum": 0, "maximum": 8 } }, "required": ["field", "index"] }
+                            },
+                            {
+                                "if": { "properties": { "type": { "const": "network" }, "environment": { "const": "gcp" }} },
+                                "then": { "properties": { "field": { "type": "string", "enum": ["ip"] }, "index": { "type": "integer", "minimum": 0, "maximum": 8 } }, "required": ["field", "index"] }
+                            }
+                        ],
+                        "required": ["environment", "type"],
+                        "additionalProperties": false
+                    },
+                    "tagProvider": {
+                        "type": "object",
+                        "properties": {
+                            "environment": {
+                                "type": "string",
+                                "enum": ["gcp", "aws", "azure"]
+                            },
+                            "key": {
+                                "type": "string",
+                                "examples": ["hostname", "id", "date"]
+                            }
+                        },
+                        "required": ["environment", "key"],
+                        "additionalProperties": false
+                    },
+                    "storageProvider": {
+                        "type": "object",
+                        "properties": {
+                            "environment": {
+                                "type": "string",
+                                "enum": ["aws", "azure", "gcp", "private"]
+                            },
+                            "source": {
+                                "description": "The URL of the AWS, Azure, Google Cloud Storage, or privately hosted source file",
+                                "type": "string",
+                                "pattern": "^(https?|http?|s3?|gs?):\/\/[^\\s$.?#].[^\\s]*$",
+                                "examples": ["https://mybucket.s3.amazonaws.com/mykey/myfile", "https://mystorageaccount.blob.core.windows.net/mycontainer/myfile", "https://storage.cloud.google.com/mybucket/mykey/myfile", "https://myserver/myfile"]
+                            },
+                            "destination": {
+                                "description": "The location where the downloaded file will be saved",
+                                "type": "string",
+                                "pattern": "^(\/var\/tmp\/|\/var\/config\/rest\/downloads\/)",
+                                "examples": ["/var/tmp/file1", "/var/config/rest/downloads/file1"]
+                            },
+                            "verifyTls": {
+                                "description": "For enabling secure site verification",
+                                "type": "boolean",
+                                "examples": ["true", "false"]
+                            },
+                            "trustedCertBundles": {
+                                "description": "List of paths to certificate bundles to use for all https requests",
+                                "type": "array",
+                                "examples": ["/path/to/cert.pem", "/path/to/another_cert.pem"]
+                            }
+                        },
+                        "required": ["environment", "source", "destination"],
+                        "additionalProperties": false
+                    },
+                    "query": {
+                        "type": "string",
+                        "examples": ["region"]
+                    },
+                    "headers": {
+                        "type": "array"
+                    }
+                },
+                "allOf": [
+                    {
+                        "if": { "properties": { "type": { "const": "static" } } },
+                        "then": { "required": ["value"] }
+                    },
+                    {
+                        "if": { "properties": { "type": { "const": "url" } } },
+                        "then": { "required": ["value"] }
+                    }
+                ],
+                "required": ["name", "type"],
+                "additionalProperties": false
+            }
+        },
+        "post_onboard_enabled": {
+            "description": "Used to specify commands which will be executed following extension services operations.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "examples": ["my_postonboard_command", "example_local_exec"]
+
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["inline", "file", "url"]
+                    },
+                    "command": {
+                        "type": "array",
+                        "items" : {
+                            "type": "string",
+                            "examples": ["/tmp/post_onboard_script.sh", "https://the-delivery-location.com/remote_post_onboard.sh"]
+                        }
+                    },
+                    "verifyTls": {
+                        "description": "For enabling secure site verification",
+                        "type": "boolean",
+                        "examples": ["true", "false"]
+                    },
+                    "trustedCertBundles": {
+                        "description": "List of paths to certificate bundles to use for all https requests",
+                        "type": "array",
+                        "examples": ["/path/to/cert.pem", "/path/to/another_cert.pem"]
+                    }
+                }
+            }
+        },
+        "pre_onboard_enabled": {
+            "description": "Used to specify commands which will be executed before extension package operations before BIG-IP is ready.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "examples": ["my_preonboard_command", "example_local_exec", "provision_rest"]
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["inline", "file", "url"]
+                    },
+                    "command": {
+                        "type": "array",
+                        "items" : {
+                            "type": "string",
+                            "examples": ["/usr/bin/setdb provision.extramb 500", "/usr/bin/setdb restjavad.useextramb true", "/tmp/pre_onboard_script.sh"]
+                        }
+                    },
+                    "verifyTls": {
+                        "description": "For enabling secure site verification",
+                        "type": "boolean",
+                        "examples": ["true", "false"]
+                    },
+                    "trustedCertBundles": {
+                        "description": "List of paths to certificate bundles to use for all https requests",
+                        "type": "array",
+                        "examples": ["/path/to/cert.pem", "/path/to/another_cert.pem"]
+                    }
+                }
+            }
+        },
+        "bigip_ready_enabled": {
+            "description": "Used to specify commands which will be executed before extension package operations after BIG-IP and MCPD are up and running.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "examples": ["my_preonboard_command", "example_local_exec", "provision_rest"]
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["inline", "file", "url"]
+                    },
+                    "command": {
+                        "type": "array",
+                        "items" : {
+                            "type": "string",
+                            "examples": [ "tmsh create net vlan external interfaces replace-all-with { 1.1 }", "tmsh create sys folder /LOCAL_ONLY device-group none traffic-group traffic-group-local-only", "tmsh save sys config" ]
+                        }
+                    },
+                    "verifyTls": {
+                        "description": "For enabling secure site verification",
+                        "type": "boolean",
+                        "examples": ["true", "false"]
+                    },
+                    "trustedCertBundles": {
+                        "description": "List of paths to certificate bundles to use for all https requests",
+                        "type": "array",
+                        "examples": ["/path/to/cert.pem", "/path/to/another_cert.pem"]
+                    }
+                }
+            }
+        },
+        "extension_packages": {
+            "description": "Used to specify Automation Toolchain packages to be installed on device.",
+            "type": "object",
+            "properties": {
+                "install_operations": {
+                    "description": "Specify the type, version, location, and endpoint of packages to install",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "extensionType": {
+                                "type": "string",
+                                "enum": ["do", "as3", "ts", "cf", "fast", "ilx"]
+                            },
+                            "extensionVersion": {
+                                "type": "string",
+                                "examples": ["1.12.0", "3.19.1"]
+                            },
+                            "extensionHash": {
+                                "type": "string",
+                                "examples": ["ba2db6e1c57d2ce6f0ca20876c820555ffc38dd0a714952b4266c4daf959d987", "95c2b76fb598bbc36fb93a2808f2e90e6c50f7723d27504f3eb2c2850de1f9e1"]
+                            },
+                            "verifyTls": {
+                                "description": "For enabling secure site verification",
+                                "type": "boolean",
+                                "examples": ["true", "false"]
+                            },
+                            "trustedCertBundles": {
+                                "description": "List of paths to certificate bundles to use for all https requests",
+                                "type": "array",
+                                "examples": ["/path/to/cert.pem", "/path/to/another_cert.pem"]
+                            },
+                            "extensionUrl": {
+                                "type": "string",
+                                "examples": ["https://github.com/F5Networks/f5-appsvcs-extension/releases/download/v3.20.0/f5-appsvcs-3.20.0-3.noarch.rpm", "file:///var/config/rest/downloads/f5-declarative-onboarding-1.10.0-2.noarch.rpm"]
+                            },
+                            "extensionVerificationEndpoint": {
+                                "type": "string",
+                                "examples": ["/mgmt/shared/myIlxApp/info"]
+                            }
+                        },
+                        "allOf": [
+                            {
+                                "if": { "properties": { "extensionType": { "const": "ilx" } } },
+                                "then": { "required": ["extensionUrl", "extensionVerificationEndpoint"] }
+                            },
+                            {
+                                "if": { "properties": { "extensionUrl": { "const": null } } },
+                                "then": { "required": ["extensionVersion"] }
+                            }
+                        ],
+                        "required": ["extensionType"],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            "required": ["install_operations"],
+            "additionalProperties": false
+        },
+        "extension_services": {
+            "description": "Used to specify configuration operations to be performed against specific extensions on device.",
+            "type": "object",
+            "properties": {
+                "service_operations": {
+                    "description": "Specify the operations to be performed against the specified services",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "extensionType": {
+                                "type": "string",
+                                "enum": ["do", "as3", "ts", "fast", "cf"]
+                            },
+                            "type": {
+                                "$comment": "url in case of local file (file:) or remote (https: or http:) and inline in case the declaration is part of the config file",
+                                "type": "string",
+                                "enum": ["url", "inline"]
+                            },
+                            "value": {
+                                "description": "URL of local or remote file containing the declarations to be applied, or the entire declaration inline as an object",
+                                "examples": ["https://cdn.f5.com/product/cloudsolutions/declarations/template2-0/autoscale-waf/autoscale_do_payg.json", "file:///examples/automation_toolchain_declarations/as3.json", "class: AS3 action: deploy persist: true declaration: class: ADC schemaVersion: 3.0.0 id: urn:uuid:33045210-3ab8-4636-9b2a-c98d22ab915d label: Sample 1 remark: Simple HTTP Service with Round-Robin Load Balancing Sample_01: class: Tenant A1: class: Application template: http serviceMain: class: Service_HTTP virtualAddresses: - 10.0.1.10 pool: web_pool web_pool: class: Pool monitors: - http members: - servicePort: 80 serverAddresses: - 192.0.1.10 - 192.0.1.11"]
+                            },
+                            "verifyTls": {
+                                "description": "For enabling secure site verification",
+                                "type": "boolean",
+                                "examples": ["true", "false"]
+                            },
+                            "trustedCertBundles": {
+                                "description": "List of paths to certificate bundles to use for all https requests",
+                                "type": "array",
+                                "examples": ["/path/to/cert.pem", "/path/to/another_cert.pem"]
+                            }
+                        },
+                        "allOf": [
+                            {
+                                "if": { "properties": { "type": { "const": "url" } } },
+                                "then": { "properties": { "value": { "type": "string", "pattern": "^(https?|file):\/\/[^\\s$.?#].[^\\s]*$"} }, "required": ["value"] }
+                            },
+                            {
+                                "if": { "properties": { "type": { "const": "inline" } } },
+                                "then": { "properties": { "value": { "type": "object"} }, "required": ["value"] }
+                            }
+                        ],
+                        "required": [],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            "required": ["service_operations"],
+            "additionalProperties": false
+        },
+        "post_hook": {
+            "description": "Details of an HTTP request to send when deployment is finished.",
+            "type": "array",
+            "properties": {
+                "name": {
+                    "description": "The name of the hook",
+                    "type": "string",
+                    "examples": ["my_webhook"]
+                },
+                "type": {
+                    "description": "The type of the hook",
+                    "type": "string",
+                    "enum": ["webhook"]
+                },
+                "url": {
+                    "description": "The destination of the hook",
+                    "type": "string",
+                    "examples": ["https://webhook.site"]
+                },
+                "verifyTls": {
+                    "description": "For enabling secure site verification",
+                    "type": "boolean",
+                    "examples": ["true", "false"]
+                },
+                "trustedCertBundles": {
+                    "description": "List of paths to certificate bundles to use for all https requests",
+                    "type": "array",
+                    "examples": ["/path/to/cert.pem", "/path/to/another_cert.pem"]
+                },
+                "properties": {
+                    "description": "Custom properties supplied by the user",
+                    "type": "object",
+                    "examples": ["optionalKey1: optional_value1, optionalKey2: optional_value2"]
+                }
+            },
+            "required": ["name", "type", "url"],
+            "additionalProperties": false
+        }
+    },
+    "required": [],
+    "additionalProperties": false
+}

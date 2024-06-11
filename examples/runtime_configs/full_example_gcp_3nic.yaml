@@ -1,0 +1,236 @@
+controls:
+  logLevel: silly
+  logFilename: /var/log/cloud/bigIpRuntimeInit.log
+pre_onboard_enabled: []
+runtime_parameters:
+  - name: ADMIN_PASS
+    type: secret
+    secretProvider:
+      environment: gcp
+      type: SecretsManager
+      version: latest
+      secretId: ${secret_id}
+  - name: HOST_NAME
+    type: url
+    value: http://169.254.169.254/computeMetadata/v1/instance/hostname
+    headers:
+      - name: Metadata-Flavor
+        value: Google
+  - name: MGMT_IP
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 1
+      ipcalc: address
+  - name: SELF_IP_EXTERNAL
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 0
+      ipcalc: address
+  - name: SELF_IP_INTERNAL
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 2
+      ipcalc: address
+  - name: MGMT_GW
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 1
+      ipcalc: first
+  - name: EXTERNAL_GW
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 0
+      ipcalc: first
+  - name: INTERNAL_GW
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 2
+      ipcalc: first
+  - name: MGMT_BITMASK
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 1
+      ipcalc: bitmask
+  - name: EXTERNAL_BITMASK
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 0
+      ipcalc: bitmask
+  - name: INTERNAL_BITMASK
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 2
+      ipcalc: bitmask
+  - name: MGMT_NETWORK
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 1
+      ipcalc: base
+  - name: EXTERNAL_NETWORK
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 0
+      ipcalc: base
+  - name: INTERNAL_NETWORK
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      field: ip
+      index: 2
+      ipcalc: base
+bigip_ready_enabled: []
+extension_packages:
+  install_operations:
+    - extensionType: do
+      extensionVersion: 1.43.0
+      extensionHash: 394f6d97219d016e90016874acb09bd27f7907fda4f1730dea0276900b753a1d
+    - extensionType: as3
+      extensionVersion: 3.50.2
+      extensionHash: 620f441bebfdce0261045e34bc7c34f2793b05c0aca62c7ec8e22bbb3f4f35c3
+    - extensionType: ts
+      extensionVersion: 1.35.0
+      extensionHash: 839698d98a8651a90b3d509cde4b382338461a253878c9fd00c894699ef0e844
+    - extensionType: fast
+      extensionVersion: 1.25.0
+      extensionHash: 434309179af405e6b663e255d4d3c0a1fd45cac9b561370e350bb8dd8b39761f
+extension_services:
+  service_operations:
+    - extensionType: do
+      type: inline
+      value:
+        schemaVersion: 1.0.0
+        class: Device
+        async: true
+        label: Example 3NIC BIG-IP with Runtime-Init
+        Common:
+          class: Tenant
+          My_DbVariables:
+            class: DbVariables
+            ui.advisory.enabled: true
+            ui.advisory.color: blue
+            ui.advisory.text: BIG-IP VE Runtime Init Example
+          My_System:
+            class: System
+            hostname: '{{{ HOST_NAME }}}'
+            cliInactivityTimeout: 1200
+            consoleInactivityTimeout: 1200
+            autoPhonehome: true
+          My_Dns:
+            class: DNS
+            nameServers:
+              - 169.254.169.254
+          My_Ntp:
+            class: NTP
+            servers:
+              - 0.pool.ntp.org
+            timezone: UTC
+          My_Provisioning:
+            class: Provision
+            ltm: nominal
+          admin:
+            class: User
+            userType: regular
+            partitionAccess:
+              all-partitions:
+                role: admin
+            password: '{{{ ADMIN_PASS }}}'
+            shell: bash
+          dhclient_route1:
+            class: ManagementRoute
+            network: '{{{MGMT_IP}}}/32'
+            type: interface
+          dhclient_route2:
+            class: ManagementRoute
+            network: '{{{MGMT_NETWORK}}}/{{{MGMT_BITMASK}}}'
+            gw: '{{{MGMT_IP}}}'
+          default:
+            class: ManagementRoute
+            mtu: 1460
+            network: default
+            gw: '{{{MGMT_GW}}}'
+          external:
+            class: VLAN
+            tag: 4094
+            mtu: 1500
+            interfaces:
+              - name: '1.0'
+                tagged: false
+          internal:
+            class: VLAN
+            tag: 4093
+            mtu: 1500
+            interfaces:
+              - name: '1.2'
+                tagged: false
+          external-self:
+            class: SelfIp
+            address: '{{{ SELF_IP_EXTERNAL }}}/32'
+            vlan: external
+            allowService: none
+            trafficGroup: traffic-group-local-only
+          internal-self:
+            class: SelfIp
+            address: '{{{ SELF_IP_INTERNAL }}}/32'
+            vlan: internal
+            allowService: default
+            trafficGroup: traffic-group-local-only
+          externalGwRoute:
+            class: Route
+            target: external
+            network: '{{{EXTERNAL_GW}}}/32'
+            mtu: 1460
+          externalIntRoute:
+            class: Route
+            gw: '{{{EXTERNAL_GW}}}'
+            network: '{{{EXTERNAL_NETWORK}}}/{{{EXTERNAL_BITMASK}}}'
+            mtu: 1460
+          internalGwRoute:
+            class: Route
+            target: internal
+            network: '{{{INTERNAL_GW}}}/32'
+            mtu: 1460
+          internalIntRoute:
+            class: Route
+            gw: '{{{EXTERNAL_GW}}}'
+            network: '{{{INTERNAL_NETWORK}}}/{{{INTERNAL_BITMASK}}}'
+            mtu: 1460
+          defaultGateway:
+            class: Route
+            gw: '{{{EXTERNAL_GW}}}'
+            network: default
+            mtu: 1460
+post_onboard_enabled: []
